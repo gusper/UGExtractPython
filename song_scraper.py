@@ -29,13 +29,23 @@ class SongScraper:
         consecutive_empty_pages = 0
         max_pages = 20  # Safety limit - increased to handle more songs
         
+        # Add browser headers to avoid 403 errors
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1'
+        }
+        
         while page <= max_pages:
             if page == 1:
                 url = "https://www.ultimate-guitar.com/contribution/6193383-gusp3r/tabs"
             else:
                 url = f"https://www.ultimate-guitar.com/contribution/6193383-gusp3r/tabs?page={page}&per-page=50"
             
-            response = requests.get(url)
+            response = requests.get(url, headers=headers)
             response.raise_for_status()
             
             soup = BeautifulSoup(response.content, 'html.parser')
@@ -126,7 +136,10 @@ class SongScraper:
         lines = []
         lines.append(f"{len(self.songs)} songs I've transcribed and shared as of {datetime.now().strftime('%B %d, %Y')}:\n")
         
-        for song in self.songs:
+        # Sort songs alphabetically by artist, then by title
+        sorted_songs = sorted(self.songs, key=lambda s: (s.artist.lower(), s.title.lower()))
+        
+        for song in sorted_songs:
             line = f"* {song.artist} - {{{{<rawhtml>}}}}<a href=\"{song.url}\" target=\"blank\">{song.title}</a>{{{{</rawhtml>}}}} ({song.file_type})"
             lines.append(line)
         
