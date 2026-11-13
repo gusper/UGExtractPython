@@ -11,17 +11,24 @@ class Program:
     
     def run(self, args: List[str]) -> str:
         """Main program logic"""
+        # --no-views skips fetching each tab page for its view count (much faster)
+        fetch_views = "--no-views" not in args
+        args = [arg for arg in args if arg != "--no-views"]
+
         self._process_args(args)
         scraper = SongScraper()
-        
+
         if not args:
-            # No arguments - scrape from web
+            # No file arguments - scrape from web
             scraper.import_web()
         else:
             # Process HTML files
             for file_path in self.files:
                 scraper.import_file(file_path)
-        
+
+        if fetch_views:
+            scraper.fetch_view_counts()
+
         output = scraper.generate_markdown()
         print(output)
         return output
