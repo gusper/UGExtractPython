@@ -214,10 +214,16 @@ class SongScraper:
         today = datetime.now()
         header = f"{len(self.songs)} songs I've transcribed and shared as of {format_date(today)}"
 
+        # Total views across every tab that has a count
+        counted = [song for song in self.songs if song.views is not None]
+        if counted:
+            total_views = sum(song.views for song in counted)
+            header += f" with a total of {total_views:,} views"
+
         # View counts can be older than the list, since they're reused from the cache.
         # When they are, add their date, using the oldest fetch date so the header
         # never overstates how fresh they are. If they're all from today, one date is enough.
-        view_dates = [song.views_as_of for song in self.songs if song.views is not None and song.views_as_of]
+        view_dates = [song.views_as_of for song in counted if song.views_as_of]
         if view_dates:
             oldest = datetime.strptime(min(view_dates), '%Y-%m-%d')
             if oldest.date() < today.date():
