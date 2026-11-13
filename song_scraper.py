@@ -1,13 +1,32 @@
+import json
+import sys
+import time
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 from song import Song
 from song_type import SongType
+
+# Browser-like headers to avoid 403 errors.
+# No 'br' in Accept-Encoding: requests can only decode Brotli if the optional brotli package is installed.
+HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.5',
+    'Accept-Encoding': 'gzip, deflate',
+    'Connection': 'keep-alive',
+    'Upgrade-Insecure-Requests': '1'
+}
+
+# Pause between tab page requests so we don't hammer UG's servers
+VIEW_FETCH_DELAY_SECONDS = 0.5
 
 class SongScraper:
     def __init__(self):
         self.songs: List[Song] = []
+        self.session = requests.Session()
+        self.session.headers.update(HEADERS)
         self.line_identifier = "— <a href=\"https://tabs.ultimate-guitar.com/tab"
     
     @property
@@ -28,25 +47,14 @@ class SongScraper:
         page = 1
         consecutive_empty_pages = 0
         max_pages = 20  # Safety limit - increased to handle more songs
-        
-        # Add browser headers to avoid 403 errors
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
-            # No 'br': requests can only decode Brotli if the optional brotli package is installed
-            'Accept-Encoding': 'gzip, deflate',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1'
-        }
-        
+
         while page <= max_pages:
             if page == 1:
                 url = "https://www.ultimate-guitar.com/contribution/6193383-gusp3r/tabs"
             else:
                 url = f"https://www.ultimate-guitar.com/contribution/6193383-gusp3r/tabs?page={page}&per-page=50"
             
-            response = requests.get(url, headers=headers)
+            response = self.session.get(url)
             response.raise_for_status()
             
             soup = BeautifulSoup(response.content, 'html.parser')
@@ -66,6 +74,30 @@ class SongScraper:
                 
             page += 1
     
+    def fetch_view_counts(self) -> None:
+        """Fetch each song's total view count from its tab page on UG"""
+        total = len(self.songs)
+        for i, song in enumerate(self.songs, start=1):
+            print(f"Fetching views {i}/{total}: {song.artist} - {song.title}", file=sys.stderr)
+            song.views = self._fetch_views(song.url)
+            if i < total:
+                time.sleep(VIEW_FETCH_DELAY_SECONDS)
+
+    def _fetch_views(self, url: str) -> Optional[int]:
+        """Read view_total from the JSON UG embeds in a tab page's .js-store element"""
+        try:
+            response = self.session.get(url)
+            response.raise_for_status()
+            soup = BeautifulSoup(response.content, 'html.parser')
+            store = soup.select_one('.js-store')
+            if not store or not store.get('data-content'):
+                return None
+            data = json.loads(store['data-content'])
+            return int(data['store']['page']['data']['tab_view']['stats']['view_total'])
+        except (requests.RequestException, ValueError, KeyError, TypeError) as e:
+            print(f"  Couldn't get views for {url}: {e}", file=sys.stderr)
+            return None
+
     def import_file(self, file_path: str) -> None:
         """Pull out the songs in an HTML file and add them to the song list"""
         with open(file_path, 'r', encoding='utf-8') as file:
@@ -141,7 +173,10 @@ class SongScraper:
         sorted_songs = sorted(self.songs, key=lambda s: (s.artist.lower(), s.title.lower()))
         
         for song in sorted_songs:
-            line = f"* {song.artist} - {{{{<rawhtml>}}}}<a href=\"{song.url}\" target=\"blank\">{song.title}</a>{{{{</rawhtml>}}}} ({song.file_type})"
+            details = str(song.file_type)
+            if song.views is not None:
+                details += f", {song.views:,} view{'' if song.views == 1 else 's'}"
+            line = f"* {song.artist} - {{{{<rawhtml>}}}}<a href=\"{song.url}\" target=\"blank\">{song.title}</a>{{{{</rawhtml>}}}} ({details})"
             lines.append(line)
         
         return '\n'.join(lines)

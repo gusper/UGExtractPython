@@ -38,6 +38,12 @@ python main.py "*.html"
 python main.py "page1.html" "page2.html"
 ```
 
+### View Counts
+By default, the script also visits each tab's page to get its total number of views on Ultimate Guitar. That adds a minute or two for ~100 tabs. Progress goes to stderr, so it doesn't end up in the markdown output. To skip it:
+```bash
+python main.py --no-views
+```
+
 ### Output to File
 Redirect output to a markdown file:
 ```bash
@@ -51,8 +57,10 @@ The application generates markdown in this format:
 ```markdown
 107 songs I've transcribed and shared as of August 03, 2025:
 
-* Artist Name - {{<rawhtml>}}<a href="https://tabs.ultimate-guitar.com/tab/..." target="blank">Song Title</a>{{</rawhtml>}} (chords)
+* Artist Name - {{<rawhtml>}}<a href="https://tabs.ultimate-guitar.com/tab/..." target="blank">Song Title</a>{{</rawhtml>}} (chords, 6,970 views)
 ```
+
+With `--no-views`, or when a tab's view count can't be read, the line ends in just the type, e.g. `(chords)`.
 
 ## Dependencies
 
