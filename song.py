@@ -9,3 +9,4 @@ class Song:
     url: str = ""
     file_type: SongType = SongType.NONE
     views: Optional[int] = None  # Total views on UG; None if not fetched
+    views_as_of: Optional[str] = None  # Date the views were fetched, "YYYY-MM-DD"
