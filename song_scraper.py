@@ -87,6 +87,7 @@ class SongScraper:
         for song in self.songs:
             if not refresh and song.url in cache:
                 song.views = cache[song.url]["views"]
+                song.views_as_of = cache[song.url].get("fetched")
             else:
                 to_fetch.append(song)
 
@@ -98,6 +99,7 @@ class SongScraper:
             print(f"Fetching views {i}/{len(to_fetch)}: {song.artist} - {song.title}", file=sys.stderr)
             song.views = self._fetch_views(song.url)
             if song.views is not None:
+                song.views_as_of = today
                 cache[song.url] = {"views": song.views, "fetched": today}
             if i < len(to_fetch):
                 time.sleep(VIEW_FETCH_DELAY_SECONDS)
@@ -206,8 +208,19 @@ class SongScraper:
     
     def generate_markdown(self) -> str:
         """Generate markdown output with Hugo shortcode formatting"""
-        lines = []
-        lines.append(f"{len(self.songs)} songs I've transcribed and shared as of {datetime.now().strftime('%B %d, %Y')}:\n")
+        def format_date(date: datetime) -> str:
+            return f"{date:%B} {date.day}, {date.year}"  # e.g. "November 5, 2026" (no leading zero)
+
+        header = f"{len(self.songs)} songs I've transcribed and shared as of {format_date(datetime.now())}"
+
+        # View counts can be older than the list, since they're reused from the cache.
+        # Use the oldest fetch date so the header never overstates how fresh they are.
+        view_dates = [song.views_as_of for song in self.songs if song.views is not None and song.views_as_of]
+        if view_dates:
+            oldest = datetime.strptime(min(view_dates), '%Y-%m-%d')
+            header += f" (view counts as of {format_date(oldest)})"
+
+        lines = [header + ":\n"]
         
         # Sort songs alphabetically by artist, then by title
         sorted_songs = sorted(self.songs, key=lambda s: (s.artist.lower(), s.title.lower()))
