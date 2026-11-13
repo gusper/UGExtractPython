@@ -211,14 +211,17 @@ class SongScraper:
         def format_date(date: datetime) -> str:
             return f"{date:%B} {date.day}, {date.year}"  # e.g. "November 5, 2026" (no leading zero)
 
-        header = f"{len(self.songs)} songs I've transcribed and shared as of {format_date(datetime.now())}"
+        today = datetime.now()
+        header = f"{len(self.songs)} songs I've transcribed and shared as of {format_date(today)}"
 
         # View counts can be older than the list, since they're reused from the cache.
-        # Use the oldest fetch date so the header never overstates how fresh they are.
+        # When they are, add their date, using the oldest fetch date so the header
+        # never overstates how fresh they are. If they're all from today, one date is enough.
         view_dates = [song.views_as_of for song in self.songs if song.views is not None and song.views_as_of]
         if view_dates:
             oldest = datetime.strptime(min(view_dates), '%Y-%m-%d')
-            header += f" (view counts as of {format_date(oldest)})"
+            if oldest.date() < today.date():
+                header += f" (view counts as of {format_date(oldest)})"
 
         lines = [header + ":\n"]
         

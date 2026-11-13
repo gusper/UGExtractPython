@@ -73,12 +73,18 @@ The application generates markdown in this format:
 * Artist Name - {{<rawhtml>}}<a href="https://tabs.ultimate-guitar.com/tab/..." target="blank">Song Title</a>{{</rawhtml>}} (chords, 6,970 views)
 ```
 
-The header has two dates because view counts are reused from `view_counts.json` and can be older than the list:
+View counts are reused from `view_counts.json`, so they can be older than the list. When they are, the header adds a second date, as in the example above:
 
 - **List date:** the day you ran the script.
-- **View counts date:** the oldest fetch date among the counts shown. A tab fetched today doesn't make the whole list look fresher than it is. Run `--refresh-views` to bring every count, and this date, up to today.
+- **View counts date:** the oldest fetch date among the counts shown. A tab fetched today doesn't make the whole list look fresher than it is.
 
-With `--no-views`, the header has no view counts date, and each line ends in just the type, e.g. `(chords)`. A tab whose count couldn't be read also ends in just its type.
+If every count was fetched today, for example after `--refresh-views`, the header shows just the list date:
+
+```markdown
+116 songs I've transcribed and shared as of November 12, 2026:
+```
+
+With `--no-views`, the header also has just the list date, and each line ends in just the type, e.g. `(chords)`. A tab whose count couldn't be read also ends in just its type.
 
 ## Dependencies
 
