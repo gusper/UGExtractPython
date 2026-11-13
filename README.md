@@ -68,10 +68,12 @@ python main.py > songs.md
 The application generates markdown in this format:
 
 ```markdown
-116 songs I've transcribed and shared as of November 20, 2026 (view counts as of November 12, 2026):
+116 songs I've transcribed and shared as of November 20, 2026 with a total of 274,010 views (view counts as of November 12, 2026):
 
 * Artist Name - {{<rawhtml>}}<a href="https://tabs.ultimate-guitar.com/tab/..." target="blank">Song Title</a>{{</rawhtml>}} (chords, 6,970 views)
 ```
+
+The header includes the total views across all tabs that have a count.
 
 View counts are reused from `view_counts.json`, so they can be older than the list. When they are, the header adds a second date, as in the example above:
 
@@ -81,10 +83,10 @@ View counts are reused from `view_counts.json`, so they can be older than the li
 If every count was fetched today, for example after `--refresh-views`, the header shows just the list date:
 
 ```markdown
-116 songs I've transcribed and shared as of November 12, 2026:
+116 songs I've transcribed and shared as of November 12, 2026 with a total of 274,010 views:
 ```
 
-With `--no-views`, the header also has just the list date, and each line ends in just the type, e.g. `(chords)`. A tab whose count couldn't be read also ends in just its type.
+With `--no-views`, the header has just the song count and list date, and each line ends in just the type, e.g. `(chords)`. A tab whose count couldn't be read also ends in just its type.
 
 ## Dependencies
 
