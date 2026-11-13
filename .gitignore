@@ -43,3 +43,5 @@ Thumbs.db
 *.html
 output.txt
 songs.md
+# Saved UG view counts (local cache; see README)
+view_counts.json

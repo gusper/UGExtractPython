@@ -4,7 +4,8 @@ import time
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
-from typing import List, Optional
+from pathlib import Path
+from typing import Dict, List, Optional
 from song import Song
 from song_type import SongType
 
@@ -74,14 +75,53 @@ class SongScraper:
                 
             page += 1
     
-    def fetch_view_counts(self) -> None:
-        """Fetch each song's total view count from its tab page on UG"""
-        total = len(self.songs)
-        for i, song in enumerate(self.songs, start=1):
-            print(f"Fetching views {i}/{total}: {song.artist} - {song.title}", file=sys.stderr)
+    def fetch_view_counts(self, cache_path: Path, refresh: bool = False) -> None:
+        """Set each song's view count, reusing counts saved in the cache file.
+
+        Only tabs missing from the cache are fetched from UG, unless refresh is
+        True, in which case every tab is fetched again. Fetched counts are saved
+        back to the cache.
+        """
+        cache = self._load_view_cache(cache_path)
+        to_fetch = []
+        for song in self.songs:
+            if not refresh and song.url in cache:
+                song.views = cache[song.url]["views"]
+            else:
+                to_fetch.append(song)
+
+        reused = len(self.songs) - len(to_fetch)
+        print(f"Views: reusing {reused} saved, fetching {len(to_fetch)} from UG", file=sys.stderr)
+
+        today = datetime.now().strftime("%Y-%m-%d")
+        for i, song in enumerate(to_fetch, start=1):
+            print(f"Fetching views {i}/{len(to_fetch)}: {song.artist} - {song.title}", file=sys.stderr)
             song.views = self._fetch_views(song.url)
-            if i < total:
+            if song.views is not None:
+                cache[song.url] = {"views": song.views, "fetched": today}
+            if i < len(to_fetch):
                 time.sleep(VIEW_FETCH_DELAY_SECONDS)
+
+        if to_fetch:
+            self._save_view_cache(cache_path, cache)
+
+    @staticmethod
+    def _load_view_cache(cache_path: Path) -> Dict[str, dict]:
+        """Read saved view counts ({url: {"views": int, "fetched": "YYYY-MM-DD"}})"""
+        if not cache_path.exists():
+            return {}
+        try:
+            with open(cache_path, 'r', encoding='utf-8') as file:
+                return json.load(file)
+        except (OSError, ValueError) as e:
+            print(f"Couldn't read {cache_path}, ignoring it: {e}", file=sys.stderr)
+            return {}
+
+    @staticmethod
+    def _save_view_cache(cache_path: Path, cache: Dict[str, dict]) -> None:
+        with open(cache_path, 'w', encoding='utf-8') as file:
+            json.dump(cache, file, indent=2, sort_keys=True)
+            file.write('\n')
 
     def _fetch_views(self, url: str) -> Optional[int]:
         """Read view_total from the JSON UG embeds in a tab page's .js-store element"""

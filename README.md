@@ -39,10 +39,13 @@ python main.py "page1.html" "page2.html"
 ```
 
 ### View Counts
-By default, the script also visits each tab's page to get its total number of views on Ultimate Guitar. That adds a minute or two for ~100 tabs. Progress goes to stderr, so it doesn't end up in the markdown output. To skip it:
-```bash
-python main.py --no-views
-```
+Each line includes the tab's total number of views on Ultimate Guitar. Getting a count means visiting that tab's page, so the script saves counts in `view_counts.json` (gitignored) next to `main.py` and reuses them:
+
+- **Default** (`python main.py`): uses saved counts, and fetches views only for tabs that aren't saved yet, such as ones you just posted. Use this for routine list updates.
+- **Refresh all** (`python main.py --refresh-views`): fetches every tab's views again and updates the saved counts. That takes a minute or two for ~100 tabs.
+- **No views** (`python main.py --no-views`): leaves view counts out of the list.
+
+The first run with no `view_counts.json` fetches every tab, the same as `--refresh-views`. Progress goes to stderr, so it doesn't end up in the markdown output.
 
 ### Output to File
 Redirect output to a markdown file:
